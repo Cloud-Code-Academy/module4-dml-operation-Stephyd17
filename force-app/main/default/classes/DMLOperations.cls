@@ -185,20 +185,15 @@ public with sharing class DMLOperations {
         acc.Name = accountName;
         upsert acc;
 
-        List<Opportunity> oppsToUpsert = new List<Opportunity>();
-
-        for (String oppName : oppNames) {
-            Opportunity opp = new Opportunity(
-                Name = oppName,
-                AccountId = acc.Id,
-                StageName = 'Prospecting',
-                CloseDate = Date.today().addMonths(1)
-            );
-            oppsToUpsert.add(opp);
-
+        for (String oppName : oppNames){
+            Opportunity opp = new Opportunity();
+                opp.Name = oppName;
+                opp.StageName = 'Prospecting';
+                opp.CloseDate = Date.today().addMonths(1);
+                opp.Amount = 5000;
+                opp.AccountId = acc.Id;
         }
-
-        upsert oppsToUpsert;
+        upsert opp;  
     }
    
     /**
