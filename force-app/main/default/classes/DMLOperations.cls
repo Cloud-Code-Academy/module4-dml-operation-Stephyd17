@@ -180,56 +180,27 @@ public with sharing class DMLOperations {
      * @param oppNames The list of Opportunity names.
      */
     public static void upsertOpportunities(String accountName, List<String> oppNames) {
-    Account acc;
-    List<Account> existingAccounts = [SELECT Id
-                                      FROM Account
-                                      WHERE Name = :accountName
-                                      LIMIT 1
-    ];
-    if (!existingAccounts.isEmpty()) {
-        acc = existingAccounts[0];
-    } else {
-        acc = new Account(Name = accountName);
-        insert acc;
-    }
+        
+        Account acc = new Account();
+        acc.Name = accountName;
+        upsert acc;
 
-    Set<String> oppNameSet = new Set<String>(oppNames);
-    List<Opportunity> existingOpportunities = [SELECT Id, Name
-                                               FROM Opportunity
-                                               WHERE Name = :oppNameSet AND AccountId = :acc.Id];
-    
-    Set<String> existingOppNames = new Set<String>();
+        List<Opportunity> oppsToUpsert = new List<Opportunity>();
 
-    for (Opportunity opp : existingOpportunities) {
-            existingOppNames.add(opp.Name);
-    }
-    List<Opportunity> opportunitiesToInsert = new List<Opportunity>();
-    List<Opportunity> opportunitiesToUpdate = new List<Opportunity>();
+        for (String oppName : oppNames) {
+            Opportunity opp = new Opportunity(
+                Name = oppName,
+                AccountId = acc.Id,
+                StageName = 'Prospecting',
+                CloseDate = Date.today().addMonths(1)
+            );
+            oppsToUpsert.add(opp);
 
-    for (String oppName : oppNames) {
-        if (!existingOppNames.contains(oppName)) {
-            Opportunity opp = new Opportunity();
-            opp.Name = oppName;
-            opp.StageName = 'Qualification';
-            opp.CloseDate = Date.today().addMonths(2);
-            opp.AccountId = acc.Id;
-            opportunitiesToInsert.add(opp);
-        } else {
-            Opportunity opp = new Opportunity(Name = oppName, AccountId = acc.Id);
-            opp.StageName = 'Qualification';
-            opp.CloseDate = Date.today().addMonths(2);
-            opportunitiesToUpdate.add(opp);
         }
-    }
 
-    if (!opportunitiesToInsert.isEmpty()) {
-        insert opportunitiesToInsert;
+        upsert oppsToUpsert;
     }
-    if (!opportunitiesToUpdate.isEmpty()) {
-        update opportunitiesToUpdate;
-    }
-}
-    
+   
     /**
      * Question 9
 	 * Upserts an Account with the specified name.
@@ -239,27 +210,25 @@ public with sharing class DMLOperations {
 	 * @return The Account that was upserted.
 	 */
 	public static Account upsertAccount(String accountName) {
-		// Query for the Account
-		List<Account> existingAccounts = [SELECT Id, Name, Description
-                                          FROM Account
-                                          WHERE Name = :accountName LIMIT 1];
-        Account accountToUpsert;
+    Account acc = new Account();
+    acc.Name = accountName;
+    
 
-		// if the Account exists, update the description
-        if (!existingAccounts.isEmpty()) {
-            accountToUpsert = existingAccounts[0];
-            accountToUpsert.Description = 'Updated Account';
-        }
-		// otherwise, create a new Account and set the description
-        else {
-            accountToUpsert = new Account();
-            accountToUpsert.Name = accountName;
-            accountToUpsert.Description = 'New Account';
-        }
-		// Upsert the Account
-        upsert accountToUpsert;
-		return accountToUpsert;
-	}
+    List<Account> existingAccounts = [SELECT Id, Name, Description
+                                      FROM Account
+                                      WHERE Name = :accountName
+                                      LIMIT 1];
+    if (!existingAccounts.isEmpty()) {
+        acc = existingAccounts[0];
+        acc.Name = accountName;
+        acc.Description = 'Updated Account';
+    } else {
+        acc.Description = 'New Account';
+    }
+    upsert acc;
+
+    return acc;
+}
 
     /**
      * Question 10
@@ -325,6 +294,7 @@ public with sharing class DMLOperations {
             Case newCase = new Case();
             newCase.Subject = 'Case ' + i;
             newCase.AccountId = accountId;
+            newCase.status = 'Closed';
             casesToCreate.add(newCase);
         }
         // Insert the cases
@@ -332,5 +302,5 @@ public with sharing class DMLOperations {
 
         // Delete the cases
         delete casesToCreate;
-        }
     }
+}
